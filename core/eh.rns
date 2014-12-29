@@ -11,3 +11,81 @@ class Exception:
 	
 	def __init__(self, msg: $str):
 		self.msg = msg
+
+class LSDA:
+	
+	start: &byte
+	lpstart: &byte
+	ttype_base: &byte
+	actions: &byte
+	ttype_encoding: byte
+	call_site_encoding: byte
+	
+	def __init__(self):
+		pass
+
+def _Unwind_GetLanguageSpecificData(ctx: lump[byte]) -> lump[byte]?
+def _Unwind_GetTextRelBase(ctx: lump[byte]) -> u64
+def _Unwind_GetDataRelBase(ctx: lump[byte]) -> u64
+def _Unwind_GetRegionStart(ctx: lump[byte]) -> u64
+
+def base_of_encoded_value(encoding: u8, ctx: lump[byte]) -> u64:
+	
+	if encoding == 255: # DW_EH_PE_omit
+		return 0
+	
+	type = encoding & 112
+	if type == 0: # DW_EH_PE_absptr
+		return 0
+	elif type == 16: # DW_EH_PE_pcrel
+		return 0
+	elif type == 80: # DW_EH_PE_aligned
+		return 0
+	elif type == 32: # DW_EH_PE_textrel
+		return _Unwind_GetTextRelBase(ctx)
+	elif type == 48: # DW_EH_PE_datarel
+		return _Unwind_GetDataRelBase(ctx)
+	elif type == 64: # DW_EH_PE_funcrel
+		return _Unwind_GetRegionStart(ctx)
+	else:
+		return 0 # ABORT here
+
+def read_encoded_value(ctx: lump[byte], encoding: u8, p: lump[byte]):
+	print(encoding & 15)
+
+def parse_lsda_header(ctx: lump[byte], p: lump[byte]) -> ($LSDA, lump[byte]):
+	
+	info = LSDA()
+	info.start = p[0]
+	
+	p = p.offset(1)
+	start_encoding = p
+	p = p.offset(1)
+	if start_encoding[0] as &u8 != 255: # DW_EH_PE_omit
+		read_encoded_value(ctx, start_encoding[0] as &u8, p)
+	else:
+		info.lpstart = info.start
+	
+	return info, p
+
+def __runa_personality(v: i32, a: i32, cls: uint, h: &UnwEx, ctx: lump[byte]) -> i32:
+	
+	print('VERSION')
+	print(v)
+	if v != 1:
+		return 3 # _URC_FATAL_PHASE1_ERROR
+	
+	print('ACTION')
+	print(a)
+	
+	foreign = cls != 19507889121949010 # 'RunaRNE\x00'
+	print('FOREIGN')
+	print(foreign)
+	
+	lsd = _Unwind_GetLanguageSpecificData(ctx)
+	if lsd is None:
+		print('no LSD')
+		return 8 # _URC_CONTINUE_UNWIND
+	
+	lsd_info, p = parse_lsda_header(ctx, lsd)
+	return 3 # _URC_FATAL_PHASE1_ERROR
