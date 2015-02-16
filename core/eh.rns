@@ -31,6 +31,7 @@ def _Unwind_GetRegionStart(ctx: lump[byte]) -> u64
 
 def base_of_encoded_value(encoding: u8, ctx: lump[byte]) -> u64:
 	
+	print('BASE-OF-ENCODED-VALUE')
 	if encoding == 255: # DW_EH_PE_omit
 		return 0
 	
@@ -50,8 +51,43 @@ def base_of_encoded_value(encoding: u8, ctx: lump[byte]) -> u64:
 	else:
 		return 0 # ABORT here
 
-def read_encoded_value(ctx: lump[byte], encoding: u8, p: lump[byte]):
+def read_encoded_value_with_base(encoding: u8, base: u64, p: lump[byte]) -> lump[byte]:
+	print('READ-ENCODED-VALUE-WITH-BASE')
+	print(encoding)
+	result = 0 as i32
+	if encoding == 80: # DW_EH_PE_aligned
+		print('aligned')
+	elif encoding & 15 == 0: # DW_EH_PE_absptr
+		print('absptr')
+	elif encoding & 15 == 1: # DW_EH_PE_uleb128
+		print('uleb128')
+	elif encoding & 15 == 9: # DW_EH_PE_sleb128
+		print('sleb128')
+	elif encoding & 15 == 2: # DW_EH_PE_udata2
+		print('udata2')
+	elif encoding & 15 == 3: # DW_EH_PE_udata4
+		print('udata4')
+	elif encoding & 15 == 4: # DW_EH_PE_udata8
+		print('udata8')
+	elif encoding & 15 == 10: # DW_EH_PE_sdata2
+		print('sdata2')
+	elif encoding & 15 == 11: # DW_EH_PE_sdata4
+		print('sdata4')
+		result = (p as lump[i32])[0]
+		p = p.offset(4)
+		print(result)
+	elif encoding & 15 == 12: # DW_EH_PE_sdata8
+		print('sdata8')
+	else:
+		result = 0
+	
+	return p
+
+def read_encoded_value(ctx: lump[byte], encoding: u8, p: lump[byte]) -> lump[byte]:
+	print('READ-ENCODED-VALUE')
 	print(encoding & 15)
+	read_encoded_value_with_base(encoding, base_of_encoded_value(encoding, ctx), p)
+	return p
 
 def parse_lsda_header(ctx: lump[byte], p: lump[byte]) -> ($LSDA, lump[byte]):
 	
