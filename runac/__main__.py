@@ -29,7 +29,10 @@ def generate(fn, opts):
 def compile(fn, opts):
 	'''Compile the given program to a binary of the same name'''
 	ir = runac.ir(fn)
-	runac.compile(ir, os.path.basename(fn).rsplit('.rns')[0])
+	if opts.outfile:
+		runac.compile(ir, opts.outfile)
+	else:
+		runac.compile(ir, os.path.basename(fn).rsplit('.rns')[0])
 
 COMMANDS = {
 	'tokens': tokens,
@@ -56,6 +59,7 @@ if __name__ == '__main__':
 	parser = optparse.OptionParser()
 	
 	parser.add_option('--last', help='last pass', default='destruct')
+	parser.add_option('--outfile', '-o', help='output file', dest="outfile")
 	parser.add_option('--test', help='no output', action='store_true')
 	parser.add_option('--traceback', help='show full traceback',
 	                  action='store_true')
